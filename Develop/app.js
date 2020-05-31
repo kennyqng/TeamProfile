@@ -5,112 +5,132 @@ const Intern = require("./lib/Intern");
 const inquirer = require("inquirer");
 const path = require("path");
 const fs = require("fs");
+const util = require("util");
+
+
+var role = "";
+var name = "";
+var id = 0;
+var email = "";
+var additionalInfo = "";
+var employeeArray = [];
 
 const OUTPUT_DIR = path.resolve(__dirname, "output");
 const outputPath = path.join(OUTPUT_DIR, "team.html");
 
+const writeFileAsync = util.promisify(fs.writeFile);
+
 const render = require("./lib/htmlRenderer");
 
 // Write code to use inquirer to gather information about the development team members,
-function aboutEmployee(){
-    let role = "";
-    let name = "";
-    let id = 0;
-    let email = "";
-    let specialTrait = "";
-    
-    inquirer
-    .prompt ([
-    
-        {
-            type: "list",
-            message: "What is the employee's role?",
-            name: "role",
-            choices: ["Manager", "Engineer", "Intern"]
-        },
-        {
-            type: "input",
-            message: "What is the employee's name?",
-            name: "name"
-        },
-        {
-            type: "input",
-            message: "What is the employee's id?",
-            name: "id"
-        },
-        {
-            type: "input",
-            message: "What is the employee's email?",
-            name: "email"
-        },
+
+function aboutEmployee() {
+  inquirer
+    .prompt([
+      {
+        type: "list",
+        message: "What is the employee's role?",
+        name: "role",
+        choices: ["Manager", "Engineer", "Intern"],
+      },
+      {
+        type: "input",
+        message: "What is the employee's name?",
+        name: "name",
+      },
+      {
+        type: "input",
+        message: "What is the employee's id?",
+        name: "id",
+      },
+      {
+        type: "input",
+        message: "What is the employee's email?",
+        name: "email",
+      },
     ])
-    .then((data)=>{
-        role = data.role;
-        name = data.name;
-        id = data.id;
-        email = data.email;
-        
-        if(data.role == "Manager"){
-            inquirer
-            .prompt(
-                {
-                    message: "What is the manager's office number?",
-                    name: "officeNumber"
-                }
-            )
-            .then((data2) =>{
-                specialTrait = data2.officeNumber;
-                console.log(createEmployee(role, name, id, email, specialTrait));
-            })
+    .then((data) => {
+      role = data.role;
+      name = data.name;
+      id = data.id;
+      email = data.email;
 
-        }
-        else if (data.role  == "Engineer"){
-            inquirer
-            .prompt(
-                {
-                    message: "What is the engineer's GitHub username?",
-                    name: "github"
-                }
-            )
-            .then((data2) =>{
-                specialTrait = data2.github;
-                console.log(createEmployee(role, name, id, email, specialTrait));
-            })
-        }
-        else{
-            inquirer
-            .prompt(
-                {
-                    message: "What is the intern's school?",
-                    name: "school"
-                }
-            )
-            .then((data2) =>{
-                specialTrait = data2.school;
-                console.log(createEmployee(role, name, id, email, specialTrait));
-            })
-        }
-    })
+      if (data.role == "Manager") {
+        inquirer
+          .prompt({
+            message: "What is the manager's office number?",
+            name: "officeNumber",
+          })
+          .then((data2) => {
+            additionalInfo = data2.officeNumber;
+            createEmployee(role, name, id, email, additionalInfo);
+          });
+      } else if (data.role == "Engineer") {
+        inquirer
+          .prompt({
+            message: "What is the engineer's GitHub username?",
+            name: "github",
+          })
+          .then((data2) => {
+            additionalInfo = data2.github;
+            createEmployee(role, name, id, email, additionalInfo);
+          });
+      } else if (data.role == "Intern") {
+        inquirer
+          .prompt({
+            message: "What is the intern's school?",
+            name: "school",
+          })
+          .then((data2) => {
+            additionalInfo = data2.school;
+            createEmployee(role, name, id, email, additionalInfo);
+          });
+      }
+    });
 }
-
-aboutEmployee();
 // and to create objects for each team member (using the correct classes as blueprints!)
 
-function createEmployee (role, name, id, email, specialTrait){
-    if(role == "Manager"){
-        const newManager = new Manager(name, id, email, specialTrait);
-        return (newManager)
-    }
-    else if (role == "Engineer"){
-        const newEngineer = new Engineer(name, id, email, specialTrait);
-        return (newEngineer)
-    }
-    else {
-        const newIntern = new Intern(name, id, email, specialTrait);
-        return (newIntern)
-    }
+function createEmployee(role, name, id, email, additional) {
+  if (role == "Manager") {
+    const newManager = new Manager(name, id, email, additional);
+    addEmployee(newManager);
+    return newManager;
+  } else if (role == "Engineer") {
+    const newEngineer = new Engineer(name, id, email, additional);
+    addEmployee(newEngineer);
+    return newEngineer;
+  } else {
+    const newIntern = new Intern(name, id, email, additional);
+    addEmployee(newIntern);
+    return newIntern;
+  }
 }
 
+function addEmployee(employee) {
+  employeeArray.push(employee);
+  console.log(employeeArray);
+  initiate();
+}
+
+function initiate() {
+  inquirer
+    .prompt({
+      message: "Would you like to add a team member?",
+      type: "list",
+      name: "repeat",
+      choices: ["Yes", "No"],
+    })
+    .then((data) => {
+      if (data.repeat === "Yes") {
+        aboutEmployee();
+      } else {
+        console.log("All done");
+        return writeFileAsync(outputPath,render(employeeArray));
+      }
+    });
+}
+
+initiate();
 
 // After the user has input all employees desired, call the `render` function (required
 // above) and pass in an array containing all employee objects; the `render` function will
